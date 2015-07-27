@@ -18,13 +18,20 @@ namespace ComicViewer
     {
 
         IArchive archive;
-        int currentEntry = 0;
+        IArchiveEntry currentEntry;
+        int currentIndex = -1;
         int currentWidth = 0;
+
         int maxImageHeight = (int)System.Windows.SystemParameters.PrimaryScreenHeight - 75;
+
+        enum Direction {
+            Forward,
+            Back
+        }
 
         public MainWindow()
         {
-           InitializeComponent();
+            InitializeComponent();
         }
 
 
@@ -42,21 +49,67 @@ namespace ComicViewer
             // Get the selected file name and log to console (for now) 
             if (result == true)
             {
-                // Open document 
+                // Open document, reset page counter
+                currentIndex = -1;
                 openArchive(dlg.FileName);
-
-                loadPage(0);
+                loadPage(Direction.Forward);
             }
         }
 
-        private void loadPage(int index)
+        private void loadPage(Direction direction)
         {
-            IArchiveEntry fileEntry = getEntry(index);
-            Bitmap bitmap = loadAndResizeBitmap(fileEntry);
-            Console.WriteLine("Image size " + bitmap.Width + "x" + bitmap.Height);
+
+            if (direction == Direction.Forward)
+            {
+                currentEntry = getNextEntry();
+            }
+            else
+            {
+                currentEntry = getPreviousEntry();
+            }
+
+            Bitmap bitmap = loadAndResizeBitmap(currentEntry);
             displayImage(bitmap);
-            currentEntry = index;
             currentWidth = bitmap.Width;
+        }
+
+        private IArchiveEntry getPreviousEntry()
+        {
+            Console.WriteLine("Getting index " + currentIndex);
+
+            // Don't try to go back before the head of the collection
+            if (currentIndex == 0)
+            {
+                return currentEntry;
+            }
+            else
+            {
+                IArchiveEntry entry = archive.Entries.ElementAt(--currentIndex);
+                while (entry.IsDirectory)
+                {
+                    getPreviousEntry();
+                }
+                return entry;
+            }
+        }
+
+
+        private IArchiveEntry getNextEntry()
+        {
+            Console.WriteLine("Getting index " + currentIndex);
+            if (currentIndex == (archive.Entries.Count() - 1))
+            {
+                return currentEntry;
+            }
+            else
+            {
+                IArchiveEntry entry = archive.Entries.ElementAt(++currentIndex);
+                while (entry.IsDirectory)
+                {
+                    getNextEntry();
+                }
+                return entry;
+            }
         }
 
         private void openArchive(String filename)
@@ -79,14 +132,6 @@ namespace ComicViewer
             }
         }
 
-        private IArchiveEntry getEntry(int index)
-        {
-            IArchiveEntry entry = archive.Entries.ElementAt(index);
-            while (entry.IsDirectory) {
-                entry = archive.Entries.ElementAt(++index);
-            }
-            return entry;
-        }
 
         private void displayImage(Bitmap bitmap)
         {
@@ -118,8 +163,6 @@ namespace ComicViewer
 
         private System.Drawing.Size getNewImageSize(System.Drawing.Size oldSize)
         {
-            Console.WriteLine("Old dimensions: " + oldSize.Width + "x" + oldSize.Height);
-
             float ratio;
             if (oldSize.Height > oldSize.Width)
             {
@@ -129,11 +172,8 @@ namespace ComicViewer
             {
                 ratio = (float)oldSize.Height / oldSize.Width;
             }
-
-            Console.WriteLine("ratio: " + ratio);
             int newWidth = (int)(maxImageHeight * ratio);
             System.Drawing.Size newSize = new System.Drawing.Size(newWidth, maxImageHeight);
-            Console.WriteLine("New dimensions: " + newSize.Width + "x" + newSize.Height);
             return newSize;
         }
 
@@ -148,7 +188,7 @@ namespace ComicViewer
 
             // Set new image to the resolution of the original
             destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
-            
+
             // Create a GDI holder and use it
             using (Graphics graphics = Graphics.FromImage(destImage))
             {
@@ -173,34 +213,40 @@ namespace ComicViewer
         private void Image_Click(object sender, MouseButtonEventArgs e)
         {
             double azimuth = e.GetPosition(ImageViewer1).X;
-            Console.WriteLine("Click: " + azimuth);
-            
-            if (currentWidth != 0) {
-
-                if (azimuth > (currentWidth / 2)) 
+            if (currentWidth != 0)
+            {
+                if (azimuth > (currentWidth / 2))
                 {
-                    loadPage(++currentEntry);
+                    Console.WriteLine("incrementing from " + currentIndex);
+                    loadPage(Direction.Forward);
                 }
                 else
                 {
-                    if (currentEntry != 0) { 
-                        loadPage(--currentEntry);
-                    }
+                    Console.WriteLine("decrementing from " + currentIndex);
+                    loadPage(Direction.Back);
                 }
             }
         }
 
-       private void MenuItem_Click_2(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_2(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("File close.");
         }
 
-       private void MenuItem_Click_3(object sender, RoutedEventArgs e)
-       {
-           Console.WriteLine("File save.");
-       }
+        private void MenuItem_Click_3(object sender, RoutedEventArgs e)
+        {
 
+            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+            dlg.FileName = archive.Entries.ElementAt(currentIndex).Key;
 
+            // Display OpenFileDialog by calling ShowDialog method 
+            Nullable<bool> result = dlg.ShowDialog();
 
+            // Get the selected file name and log to console (for now) 
+            if (result == true)
+            {
+                archive.Entries.ElementAt(currentIndex).WriteToFile(dlg.FileName);
+            }
+        }
     }
 }

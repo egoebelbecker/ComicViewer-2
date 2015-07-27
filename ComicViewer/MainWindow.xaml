@@ -15,7 +15,7 @@
         </Menu>
         <StackPanel Orientation="Vertical">
             <StackPanel >
-                <Image x:Name="ImageViewer1" />
+                <Image x:Name="ImageViewer1" MouseDown="Image_Click"/>
             </StackPanel>
         </StackPanel>
     </Grid>

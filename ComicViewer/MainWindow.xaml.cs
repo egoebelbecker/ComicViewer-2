@@ -75,7 +75,6 @@ namespace ComicViewer
 
         private IArchiveEntry getPreviousEntry()
         {
-            Console.WriteLine("Getting index " + currentIndex);
 
             // Don't try to go back before the head of the collection
             if (currentIndex == 0)
@@ -96,7 +95,6 @@ namespace ComicViewer
 
         private IArchiveEntry getNextEntry()
         {
-            Console.WriteLine("Getting index " + currentIndex);
             if (currentIndex == (archive.Entries.Count() - 1))
             {
                 return currentEntry;
@@ -217,12 +215,10 @@ namespace ComicViewer
             {
                 if (azimuth > (currentWidth / 2))
                 {
-                    Console.WriteLine("incrementing from " + currentIndex);
                     loadPage(Direction.Forward);
                 }
                 else
                 {
-                    Console.WriteLine("decrementing from " + currentIndex);
                     loadPage(Direction.Back);
                 }
             }
@@ -230,22 +226,24 @@ namespace ComicViewer
 
         private void MenuItem_Click_2(object sender, RoutedEventArgs e)
         {
-            Console.WriteLine("File close.");
+            archive = null;
+            currentEntry = null;
+            ImageViewer1.Source = null;
+            ImageViewer1.Height = 0;
+            ImageViewer1.Width = 0;
+            currentIndex = 0;
+            currentWidth = 0;
         }
 
         private void MenuItem_Click_3(object sender, RoutedEventArgs e)
         {
 
             Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
-            dlg.FileName = archive.Entries.ElementAt(currentIndex).Key;
-
-            // Display OpenFileDialog by calling ShowDialog method 
+            dlg.FileName = Path.GetFileName(currentEntry.Key);
             Nullable<bool> result = dlg.ShowDialog();
-
-            // Get the selected file name and log to console (for now) 
             if (result == true)
             {
-                archive.Entries.ElementAt(currentIndex).WriteToFile(dlg.FileName);
+                currentEntry.WriteToFile(dlg.FileName);
             }
         }
     }
